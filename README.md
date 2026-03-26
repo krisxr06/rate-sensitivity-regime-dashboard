@@ -90,6 +90,7 @@ priority order:
 | **2 — Yield Volatility** | Grouped bar: avg change & σ by regime for 2Y and 10Y |
 | **3 — Duration Sensitivity** | DV01 heatmap + directional bias table + adverse moves chart |
 | **4 — Risk Summary** | 4 data-driven bullets: highest volatility, most exposed maturity, directional bias, current regime |
+| **5 — Regime → Portfolio Playbook** | Heuristic interpretation layer: volatility label, directional bias, regime character, duration risk, carry environment, convexity value, and positioning context bullets — all derived rule-based from historical regime statistics |
 
 ## Key Takeaways
 
@@ -101,6 +102,8 @@ priority order:
   transition dynamics that compress term premium.
 - **Directional bias** varies by regime: not all yield changes in a given regime
   are adverse — the % of months rising vs falling matters as much as magnitude.
+- **The Playbook section** translates current regime into descriptive risk labels (duration, carry, convexity)
+  and positioning context derived from historical regime statistics — not forecasts.
 
 ## How to Run
 

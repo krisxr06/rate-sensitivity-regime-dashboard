@@ -257,3 +257,110 @@ def section4_bullets(df: pd.DataFrame, vals: dict) -> str:
     b4 = f"- **Current regime:** {current} — {char_map.get(current, 'see historical data')}"
 
     return "  \n".join([b1, b2, b3, b4])
+
+
+# ── Section 5: Regime → Portfolio Playbook ────────────────────────────────────
+
+def get_portfolio_playbook(df: pd.DataFrame, vals: dict) -> dict:
+    """
+    Descriptive heuristic layer translating the current yield curve regime
+    into historically informed portfolio risk labels and positioning context.
+
+    This is NOT a trading signal or investment recommendation.
+    All outputs are rule-based interpretations of historical regime statistics.
+
+    Returns a dict with:
+        current_regime, volatility_label, directional_bias, regime_character,
+        duration_risk, carry_environment, convexity_value, bullets
+    """
+    current_regime = vals.get("yc_regime", "Unknown")
+
+    # ── Volatility label ──────────────────────────────────────────────────────
+    # Derived from the current regime's 10Y monthly std dev (bps).
+    # Thresholds: Low < 25 bps | Moderate 25–45 bps | High > 45 bps
+    stats = compute_regime_yield_stats(df)
+    vol_label = "N/A"
+    if current_regime in stats.index:
+        std_10y = stats.loc[current_regime, "std_10y"]
+        if std_10y < 25:
+            vol_label = "Low"
+        elif std_10y <= 45:
+            vol_label = "Moderate"
+        else:
+            vol_label = "High"
+
+    # ── Directional bias label ────────────────────────────────────────────────
+    # % of months the 10Y yield rose within the current regime.
+    # Rose ≥ 55% → "Tended to Rise" | Fell ≥ 55% → "Tended to Fall" | else Mixed
+    bias_label = "Mixed"
+    valid = df[df["yc_regime"] == current_regime].dropna(subset=["DGS10_chg"])
+    if len(valid) >= 5:
+        pct_rose = (valid["DGS10_chg"] > 0).mean() * 100
+        pct_fell = (valid["DGS10_chg"] < 0).mean() * 100
+        if pct_rose >= 55:
+            bias_label = "Tended to Rise"
+        elif pct_fell >= 55:
+            bias_label = "Tended to Fall"
+
+    # ── Regime character ──────────────────────────────────────────────────────
+    # Descriptive structural label — not a forecast.
+    character_map = {
+        "Re-steepening": "Transitional",
+        "Flat":          "Transitional",
+        "Inverted":      "Stressed",
+        "Normal":        "Stable",
+    }
+    regime_character = character_map.get(current_regime, "Unknown")
+
+    # ── Portfolio interpretation (fixed heuristic mapping) ────────────────────
+    # Descriptive labels derived from regime structure. Not predictions.
+    # "Low to Moderate" → Low; "Moderate to High" → High (simplified for display).
+    portfolio_map = {
+        "Normal":        {"duration_risk": "Moderate", "carry": "Supportive", "convexity": "Low"},
+        "Flat":          {"duration_risk": "Moderate", "carry": "Neutral",    "convexity": "Increasing"},
+        "Inverted":      {"duration_risk": "High",     "carry": "Weak",       "convexity": "High"},
+        "Re-steepening": {"duration_risk": "High",     "carry": "Weak",       "convexity": "High"},
+    }
+    interp = portfolio_map.get(current_regime, {
+        "duration_risk": "N/A", "carry": "N/A", "convexity": "N/A",
+    })
+
+    # ── Positioning implication bullets ──────────────────────────────────────
+    # Observational, regime-specific context. Not trade recommendations.
+    bullets_map = {
+        "Normal": [
+            "Historically associated with lower rate volatility than inversion or transition phases.",
+            "Duration exposure has generally been easier to hold than in re-steepening or inverted regimes.",
+            "Optionality has typically been less central than in more volatile transition states.",
+        ],
+        "Flat": [
+            "Historically a more neutral carry environment with less directional clarity.",
+            "Positioning has typically required more balance between carry and rate risk.",
+            "Optionality can become more relevant if the curve begins to transition.",
+            "Flat regimes are typically transition phases rather than stable states.",
+        ],
+        "Inverted": [
+            "Historically associated with tighter carry conditions and elevated policy uncertainty.",
+            "Duration outcomes have been less one-directional than the curve shape alone might suggest.",
+            "More cautious positioning has typically been favored relative to stable normal-curve periods.",
+        ],
+        "Re-steepening": [
+            "Historically the most volatile transition phase in the sample.",
+            "Duration exposure has been harder to manage as rates reprice unevenly.",
+            "Optionality has typically become more valuable during these transition periods.",
+        ],
+    }
+    bullets = bullets_map.get(current_regime, [
+        "Insufficient regime history for positioning context.",
+    ])
+
+    return {
+        "current_regime":    current_regime,
+        "volatility_label":  vol_label,
+        "directional_bias":  bias_label,
+        "regime_character":  regime_character,
+        "duration_risk":     interp["duration_risk"],
+        "carry_environment": interp["carry"],
+        "convexity_value":   interp["convexity"],
+        "bullets":           bullets,
+    }

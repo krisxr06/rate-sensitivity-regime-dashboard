@@ -28,6 +28,7 @@ from src.utils       import (
     snapshot_summary,
     directional_bias_table,
     section4_bullets,
+    get_portfolio_playbook,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -220,6 +221,63 @@ st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 # ══════════════════════════════════════════════════════════════════════════════
 st.subheader("4 — Regime Duration Risk Summary")
 st.markdown(section4_bullets(df, vals))
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — Regime → Portfolio Playbook
+# ══════════════════════════════════════════════════════════════════════════════
+st.subheader("5 — Regime → Portfolio Playbook")
+st.markdown(
+    "This section translates regime classification into historically observed portfolio risk characteristics."
+)
+st.markdown(
+    "<div class='disclaimer'>"
+    "⚠ Descriptive heuristic layer only — not investment advice or a trading signal. "
+    "All labels are rule-based interpretations of historical regime statistics."
+    "</div>",
+    unsafe_allow_html=True,
+)
+st.write("")
+
+playbook = get_portfolio_playbook(df, vals)
+
+# Block A: Current regime
+st.markdown(
+    f"**Current Regime:** &nbsp;<span class='badge {_badge}'>{playbook['current_regime']}</span>",
+    unsafe_allow_html=True,
+)
+st.write("")
+
+# Block B: Historical Behavior
+st.markdown("**Historical Behavior**")
+b1, b2, b3 = st.columns(3)
+b1.metric("Volatility",       playbook["volatility_label"])
+b2.metric("Directional Bias", playbook["directional_bias"])
+b3.metric("Regime Character", playbook["regime_character"])
+st.write("")
+
+# Block C: Portfolio Risk Interpretation
+st.markdown("**Portfolio Risk Interpretation**")
+p1, p2, p3 = st.columns(3)
+p1.metric("Duration Risk",     playbook["duration_risk"])
+p2.metric("Carry Environment", playbook["carry_environment"])
+p3.metric("Convexity Value",   playbook["convexity_value"])
+st.write("")
+
+# Block D: Positioning Implications
+st.markdown("**Positioning Implications**")
+for bullet in playbook["bullets"]:
+    st.markdown(f"- {bullet}")
+
+st.markdown(
+    "<div class='caption-text'>"
+    "Labels derived from historical regime statistics. "
+    "This framework is descriptive rather than predictive — intended to contextualize "
+    "rate environments, not forecast them."
+    "</div>",
+    unsafe_allow_html=True,
+)
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 st.caption(
     "Data: Federal Reserve Economic Data (FRED) · "
